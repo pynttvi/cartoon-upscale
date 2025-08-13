@@ -110,7 +110,7 @@ def upscale_frames():
         "-m",
         SETTINGS["waifu_model"],
         "-g",
-        str(SETTINGS["gpu"]),
+        str(SETTINGS["primary_gpu"]),
         "-j",
         str(SETTINGS["threads"]),
     ]
@@ -136,7 +136,7 @@ def interpolate_frames():
         "-m",
         SETTINGS.get("rife_model", "rife-anime"),
         "-g",
-        str(SETTINGS["gpu"]),
+        str(SETTINGS["primary_gpu"]),
         "-j",
         str(SETTINGS["threads"]),
     ]
@@ -169,9 +169,9 @@ if __name__ == "__main__":
         exit(1)
 
     if len(sys.argv) > 2:
-        SETTINGS["gpu"] = sys.argv[2]
+        SETTINGS["primary_gpu"] = sys.argv[2]
     elif os.environ.get("GPU"):
-        SETTINGS["gpu"] = os.environ["GPU"]
+        SETTINGS["primary_gpu"] = os.environ["GPU"]
 
     SETTINGS["input_path"] = sys.argv[1]
     NAME = Path(SETTINGS["input_path"]).stem

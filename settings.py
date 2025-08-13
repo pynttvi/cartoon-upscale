@@ -17,10 +17,10 @@ SETTINGS = {
     # Processing settings
     "scale": 2,
     "noise": 3,
-    "gpu": "1",
+    "primary_gpu": 1,
+    "gpus_used_count": 2,
     "framerate": 25,
     "batch_size": 20,
     "threads": "2:1:9",
     "final_encoder": "h264",
-    "wait_between_batches": 1,
 }

@@ -10,6 +10,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import re
 import tempfile
 
+from util.estimate_png_frames_size import plan_chunks_for_shm
+
 
 def load_progress():
     pf = Path(SETTINGS["working_dir"]) / SETTINGS["batched_progress_file"]
@@ -128,8 +130,12 @@ def join_videos(
                 print(f"⚠️ Could not delete split part {f}: {e}")
 
 
+gpu_id = SETTINGS["primary_gpu"]
+
+
 def process_part(idx, part):
-    gpu_id = str(idx % 2)  # alternate: 0, 1, 0, 1, ...
+    global gpu_id
+    gpu_id = str((gpu_id + 1) % SETTINGS["gpus_used_count"])
     env = os.environ.copy()
     env["GPU"] = gpu_id  # Only if your pipeline uses this (see below!)
 
@@ -160,12 +166,23 @@ def process_part(idx, part):
 # --- Example usage:
 if __name__ == "__main__":
     task_start = time.time()
-    if len(sys.argv) < 3:
-        print("Usage: pipeline.py <input.mp4> <pieces>")
+    if len(sys.argv) < 2:
+        print("Usage: pipeline.py <input.mp4> (<pieces>)")
         sys.exit(1)
 
     input_video = Path(sys.argv[1])
-    pieces = int(sys.argv[2])
+
+    if len(sys.argv) < 3:
+        pieces = (
+            plan_chunks_for_shm(video_path=input_video, safety_multiplier=4)[
+                "num_chunks"
+            ]
+            * SETTINGS["gpus_used_count"]
+            + 1
+        )
+        print(f"Chunks needed: {pieces}")
+    else:
+        pieces = int(sys.argv[2])
 
     NAME = input_video.stem
     SETTINGS["file_name"] = NAME
@@ -179,7 +196,7 @@ if __name__ == "__main__":
     print("Splits:", parts)
 
     # 2. Process each part (call your full pipeline here)
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    with ThreadPoolExecutor(max_workers=SETTINGS["gpus_used_count"]) as executor:
         futures = []
         for idx, part in enumerate(parts):
             futures.append(executor.submit(process_part, idx, part))
